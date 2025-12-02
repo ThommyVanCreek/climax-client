@@ -1,0 +1,26 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# ClimaX Client - Development Dockerfile (with Vite Hot Reload)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source (will be overwritten by volume mount in dev)
+COPY . .
+
+# Expose Vite dev server port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD wget -q --spider http://localhost:3000/ || exit 1
+
+# Run Vite dev server with host binding for Docker
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
