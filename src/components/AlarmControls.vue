@@ -1,112 +1,94 @@
 <script setup>
 import { ref } from 'vue'
 import { useSecurityStore } from '../stores/security'
+import PinKeypad from './PinKeypad.vue'
 
 const security = useSecurityStore()
-const arming = ref(false)
-const disarming = ref(false)
-const pin = ref('')
-const showPinInput = ref(false)
+const loading = ref(false)
+const showKeypad = ref(false)
+const keypadError = ref('')
 const pendingAction = ref(null) // { type: 'arm'|'disarm', mode?: string }
+
+const keypadTitle = ref('Enter PIN')
+const keypadSubtitle = ref('')
 
 function requestPin(action, mode = null) {
   pendingAction.value = { type: action, mode }
-  showPinInput.value = true
-  pin.value = ''
-}
-
-async function submitPin() {
-  if (pin.value.length !== 4) return
+  keypadError.value = ''
   
-  const action = pendingAction.value
-  showPinInput.value = false
-  
-  if (action.type === 'arm') {
-    arming.value = true
-    try {
-      await security.armSystem(action.mode, pin.value)
-    } finally {
-      arming.value = false
-    }
+  if (action === 'arm') {
+    const modeNames = { away: 'Away', stay: 'Stay', night: 'Night' }
+    keypadTitle.value = `Arm ${modeNames[mode]}`
+    keypadSubtitle.value = 'Enter PIN to arm system'
   } else {
-    disarming.value = true
-    try {
-      await security.disarmSystem(pin.value)
-    } finally {
-      disarming.value = false
-    }
+    keypadTitle.value = 'Disarm System'
+    keypadSubtitle.value = 'Enter PIN to disarm'
   }
   
-  pin.value = ''
-  pendingAction.value = null
+  showKeypad.value = true
 }
 
-function cancelPin() {
-  showPinInput.value = false
-  pin.value = ''
+async function handlePinSubmit(pin) {
+  const action = pendingAction.value
+  loading.value = true
+  keypadError.value = ''
+  
+  try {
+    if (action.type === 'arm') {
+      await security.armSystem(action.mode, pin)
+    } else {
+      await security.disarmSystem(pin)
+    }
+    showKeypad.value = false
+    pendingAction.value = null
+  } catch (e) {
+    keypadError.value = e.message || 'Invalid PIN'
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleKeypadCancel() {
+  showKeypad.value = false
   pendingAction.value = null
+  keypadError.value = ''
 }
 </script>
 
 <template>
-  <div class="card p-6">
-    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Alarm Controls</h2>
-    
-    <!-- PIN Input Modal -->
-    <div v-if="showPinInput" class="mb-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        Enter PIN
-      </label>
-      <input 
-        v-model="pin"
-        type="password"
-        maxlength="4"
-        pattern="[0-9]*"
-        inputmode="numeric"
-        autofocus
-        @keyup.enter="submitPin"
-        @keyup.escape="cancelPin"
-        class="w-full px-4 py-3 text-center text-2xl tracking-widest border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-        placeholder="••••"
-      />
-      <div class="flex gap-2 mt-3">
-        <button @click="cancelPin" class="flex-1 btn bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
-          Cancel
-        </button>
-        <button @click="submitPin" :disabled="pin.length !== 4" class="flex-1 btn btn-primary">
-          Confirm
-        </button>
-      </div>
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Controls</h2>
     </div>
     
-    <div v-else class="space-y-3">
+    <div class="space-y-3">
       <!-- Arm buttons (show when disarmed) -->
       <template v-if="!security.isArmed && !security.isTriggered">
         <button 
           @click="requestPin('arm', 'away')"
-          :disabled="arming || security.loading"
-          class="w-full btn btn-danger flex items-center justify-center gap-2"
+          :disabled="loading || security.loading"
+          class="w-full py-4 rounded-2xl font-semibold text-lg bg-red-500/90 hover:bg-red-500 text-white flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50"
         >
-          <span>🔒</span>
-          <span>{{ arming ? 'Arming...' : 'Arm Away' }}</span>
+          <span class="text-2xl">🔒</span>
+          <span>Arm Away</span>
         </button>
         
         <button 
           @click="requestPin('arm', 'stay')"
-          :disabled="arming || security.loading"
-          class="w-full btn bg-amber-500 text-white hover:bg-amber-600 flex items-center justify-center gap-2"
+          :disabled="loading || security.loading"
+          class="w-full py-4 rounded-2xl font-semibold text-lg bg-amber-500/90 hover:bg-amber-500 text-white flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50"
         >
-          <span>🏠</span>
-          <span>{{ arming ? 'Arming...' : 'Arm Stay' }}</span>
+          <span class="text-2xl">🏠</span>
+          <span>Arm Stay</span>
         </button>
 
         <button 
           @click="requestPin('arm', 'night')"
-          :disabled="arming || security.loading"
-          class="w-full btn bg-indigo-500 text-white hover:bg-indigo-600 flex items-center justify-center gap-2"
+          :disabled="loading || security.loading"
+          class="w-full py-4 rounded-2xl font-semibold text-lg bg-indigo-500/90 hover:bg-indigo-500 text-white flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50"
         >
-          <span>🌙</span>
-          <span>{{ arming ? 'Arming...' : 'Arm Night' }}</span>
+          <span class="text-2xl">🌙</span>
+          <span>Arm Night</span>
         </button>
       </template>
 
@@ -114,18 +96,39 @@ function cancelPin() {
       <template v-else>
         <button 
           @click="requestPin('disarm')"
-          :disabled="disarming || security.loading"
-          class="w-full btn btn-primary flex items-center justify-center gap-2 py-4 text-lg"
+          :disabled="loading || security.loading"
+          class="w-full py-6 rounded-2xl font-bold text-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50"
         >
-          <span>🔓</span>
-          <span>{{ disarming ? 'Disarming...' : 'Disarm System' }}</span>
+          <span class="text-3xl">🔓</span>
+          <span>Disarm</span>
         </button>
       </template>
     </div>
 
     <!-- Arm warnings -->
-    <div v-if="!security.isArmed && security.openSensors.length > 0" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-      <p>⚠️ Open sensors will be bypassed when arming</p>
+    <div v-if="!security.isArmed && security.openSensors.length > 0" class="mt-4 p-3 rounded-xl bg-amber-500/10">
+      <p class="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+        <span>⚠️</span>
+        <span>{{ security.openSensors.length }} open sensor{{ security.openSensors.length > 1 ? 's' : '' }} will be bypassed</span>
+      </p>
     </div>
+    
+    <div v-if="!security.isArmed && security.offlineSensors.length > 0" class="mt-3 p-3 rounded-xl bg-red-500/10">
+      <p class="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+        <span>⚠️</span>
+        <span>{{ security.offlineSensors.length }} sensor{{ security.offlineSensors.length > 1 ? 's' : '' }} offline</span>
+      </p>
+    </div>
+
+    <!-- PIN Keypad Modal -->
+    <PinKeypad 
+      :show="showKeypad"
+      :title="keypadTitle"
+      :subtitle="keypadSubtitle"
+      :loading="loading"
+      :error="keypadError"
+      @submit="handlePinSubmit"
+      @cancel="handleKeypadCancel"
+    />
   </div>
 </template>

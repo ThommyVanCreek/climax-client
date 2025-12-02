@@ -4,49 +4,54 @@ import { useSecurityStore } from '../stores/security'
 const security = useSecurityStore()
 
 const stateDisplay = {
-  'disarmed': { label: 'Disarmed', class: 'status-disarmed', icon: '🔓' },
-  'armed_away': { label: 'Armed Away', class: 'status-armed', icon: '🔒' },
-  'armed_stay': { label: 'Armed Stay', class: 'status-armed', icon: '🏠' },
-  'armed_night': { label: 'Armed Night', class: 'status-armed', icon: '🌙' },
-  'triggered': { label: 'TRIGGERED!', class: 'bg-red-600 text-white animate-pulse', icon: '🚨' },
-  'entry_delay': { label: 'Entry Delay', class: 'status-pending', icon: '⏳' },
-  'exit_delay': { label: 'Exit Delay', class: 'status-pending', icon: '⏳' },
-  'unknown': { label: 'Unknown', class: 'bg-gray-200 text-gray-600', icon: '❓' },
+  'disarmed': { label: 'Disarmed', bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400', icon: '🔓' },
+  'armed_away': { label: 'Armed Away', bg: 'bg-red-500/10 dark:bg-red-500/20', text: 'text-red-600 dark:text-red-400', icon: '🔒' },
+  'armed_stay': { label: 'Armed Stay', bg: 'bg-red-500/10 dark:bg-red-500/20', text: 'text-red-600 dark:text-red-400', icon: '🏠' },
+  'armed_night': { label: 'Armed Night', bg: 'bg-indigo-500/10 dark:bg-indigo-500/20', text: 'text-indigo-600 dark:text-indigo-400', icon: '🌙' },
+  'triggered': { label: 'TRIGGERED!', bg: 'bg-red-600', text: 'text-white', icon: '🚨', pulse: true },
+  'entry_delay': { label: 'Entry Delay', bg: 'bg-amber-500/10 dark:bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400', icon: '⏳' },
+  'exit_delay': { label: 'Exit Delay', bg: 'bg-amber-500/10 dark:bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400', icon: '⏳' },
+  'unknown': { label: 'Connecting...', bg: 'bg-gray-100 dark:bg-dark-700', text: 'text-gray-500 dark:text-gray-400', icon: '•••' },
 }
 
 const currentState = () => stateDisplay[security.alarmState] || stateDisplay.unknown
 </script>
 
 <template>
-  <div class="card p-6">
-    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">System Status</h2>
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">System Status</h2>
+    </div>
     
     <div 
-      class="rounded-xl p-6 text-center"
-      :class="currentState().class"
+      class="rounded-2xl p-6 text-center transition-all duration-300"
+      :class="[currentState().bg, currentState().pulse && 'animate-pulse']"
     >
-      <div class="text-4xl mb-2">{{ currentState().icon }}</div>
-      <div class="text-2xl font-bold">{{ currentState().label }}</div>
+      <div class="text-5xl mb-3">{{ currentState().icon }}</div>
+      <div class="text-2xl font-bold" :class="currentState().text">{{ currentState().label }}</div>
       
       <!-- Entry/Exit delay countdown -->
-      <div v-if="security.status?.alarm?.entryDelayRemaining" class="mt-2 text-lg">
-        {{ security.status.alarm.entryDelayRemaining }}s remaining
-      </div>
-      <div v-if="security.status?.alarm?.exitDelayRemaining" class="mt-2 text-lg">
-        {{ security.status.alarm.exitDelayRemaining }}s remaining
+      <div 
+        v-if="security.status?.alarm?.delayRemaining" 
+        class="mt-3 text-lg font-mono" 
+        :class="currentState().text"
+      >
+        {{ security.status.alarm.delayRemaining }}s
       </div>
     </div>
 
     <!-- Warnings -->
-    <div v-if="security.openSensors.length > 0 && !security.isArmed" class="mt-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-      <p class="text-sm text-amber-800 dark:text-amber-200">
-        ⚠️ {{ security.openSensors.length }} sensor(s) currently open
+    <div v-if="security.openSensors.length > 0 && !security.isArmed" class="mt-4 p-3 rounded-xl bg-amber-500/10">
+      <p class="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+        <span>⚠️</span>
+        <span>{{ security.openSensors.length }} sensor{{ security.openSensors.length > 1 ? 's' : '' }} open</span>
       </p>
     </div>
 
-    <div v-if="security.offlineSensors.length > 0" class="mt-4 p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
-      <p class="text-sm text-red-800 dark:text-red-200">
-        ⚠️ {{ security.offlineSensors.length }} sensor(s) offline
+    <div v-if="security.offlineSensors.length > 0" class="mt-3 p-3 rounded-xl bg-red-500/10">
+      <p class="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+        <span>⚠️</span>
+        <span>{{ security.offlineSensors.length }} sensor{{ security.offlineSensors.length > 1 ? 's' : '' }} offline</span>
       </p>
     </div>
   </div>

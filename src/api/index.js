@@ -1,5 +1,7 @@
 // API configuration
 // VITE_API_URL - Database server API (historical data)
+//   - If empty, uses relative paths (proxied through nginx /api/ -> api:5000/api/)
+//   - If set (e.g., 'http://localhost:5000'), uses direct URL to API server
 // VITE_BRIDGE_URL - Direct ESP32 Bridge API (real-time data)
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 const BRIDGE_URL = import.meta.env.VITE_BRIDGE_URL || ''
@@ -7,6 +9,7 @@ const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 /**
  * Fetch wrapper for Database Server API (with authentication)
+ * Endpoints should start with /api/ (e.g., '/api/events')
  */
 async function apiFetch(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`
@@ -20,17 +23,25 @@ async function apiFetch(endpoint, options = {}) {
     headers['X-API-Key'] = API_KEY
   }
   
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  })
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }))
-    throw new Error(error.message || `HTTP ${response.status}`)
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    })
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Request failed' }))
+      throw new Error(error.message || `HTTP ${response.status}`)
+    }
+    
+    return response.json()
+  } catch (e) {
+    // Improve error message for network/CORS errors
+    if (e.name === 'TypeError' && e.message.includes('fetch')) {
+      throw new Error(`Cannot connect to database server. Check CORS settings or if server is running.`)
+    }
+    throw e
   }
-  
-  return response.json()
 }
 
 /**
@@ -141,6 +152,43 @@ export const bridgeApi = {
   getDashboard() {
     return bridgeFetch('/api/dashboard')
   },
+
+  /**
+   * Set sensor bypass
+   * @param {number} sensorId - Sensor index
+   * @param {boolean} enabled - Enable or disable bypass
+   * @param {string} pin - 4-digit PIN code
+   */
+  setSensorBypass(sensorId, enabled, pin) {
+    return bridgeFetch(`/api/sensor/${sensorId}/bypass`, {
+      method: 'POST',
+      body: JSON.stringify({ enabled, pin }),
+    })
+  },
+
+  /**
+   * Set sensor night bypass
+   * @param {number} sensorId - Sensor index
+   * @param {boolean} enabled - Enable or disable night bypass
+   * @param {string} pin - 4-digit PIN code
+   */
+  setSensorNightBypass(sensorId, enabled, pin) {
+    return bridgeFetch(`/api/sensor/${sensorId}/nightbypass`, {
+      method: 'POST',
+      body: JSON.stringify({ enabled, pin }),
+    })
+  },
+
+  /**
+   * Trigger panic alarm
+   * @param {string} pin - 4-digit PIN code
+   */
+  triggerAlarm(pin) {
+    return bridgeFetch('/api/alarm/trigger', {
+      method: 'POST',
+      body: JSON.stringify({ pin }),
+    })
+  },
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -155,6 +203,29 @@ export const databaseApi = {
   getEvents(params = {}) {
     const query = new URLSearchParams(params).toString()
     return apiFetch(`/api/events?${query}`)
+  },
+
+  /**
+   * Get dashboard summary
+   */
+  getDashboardSummary() {
+    return apiFetch('/api/dashboard/summary')
+  },
+
+  /**
+   * Get recent activity
+   * @param {Object} params - Query parameters (limit)
+   */
+  getRecentActivity(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    return apiFetch(`/api/dashboard/recent-activity?${query}`)
+  },
+
+  /**
+   * Get all sensors with current state
+   */
+  getSensors() {
+    return apiFetch('/api/sensors')
   },
 
   /**
@@ -181,7 +252,16 @@ export const databaseApi = {
    */
   getAlarmHistory(params = {}) {
     const query = new URLSearchParams(params).toString()
-    return apiFetch(`/api/alarm/history?${query}`)
+    return apiFetch(`/api/alarms?${query}`)
+  },
+
+  /**
+   * Get daily statistics
+   * @param {Object} params - Query parameters (days)
+   */
+  getDailyStats(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    return apiFetch(`/api/stats/daily?${query}`)
   },
 }
 
