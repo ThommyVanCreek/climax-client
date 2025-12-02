@@ -100,21 +100,24 @@ export const bridgeApi = {
 
   /**
    * Arm the alarm system
-   * @param {string} mode - 'stay' or 'away'
+   * @param {string} mode - 'stay', 'away', or 'night'
+   * @param {string} pin - 4-digit PIN code
    */
-  armAlarm(mode = 'away') {
-    return bridgeFetch('/api/alarm/arm', {
+  armAlarm(mode = 'away', pin) {
+    return bridgeFetch('/api/alarm', {
       method: 'POST',
-      body: JSON.stringify({ mode }),
+      body: JSON.stringify({ state: mode, pin }),
     })
   },
 
   /**
    * Disarm the alarm system
+   * @param {string} pin - 4-digit PIN code
    */
-  disarmAlarm() {
-    return bridgeFetch('/api/alarm/disarm', {
+  disarmAlarm(pin) {
+    return bridgeFetch('/api/alarm', {
       method: 'POST',
+      body: JSON.stringify({ state: 'disarm', pin }),
     })
   },
 

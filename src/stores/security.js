@@ -46,11 +46,11 @@ export const useSecurityStore = defineStore('security', () => {
     }
   }
 
-  async function armSystem(mode = 'away') {
+  async function armSystem(mode = 'away', pin) {
     loading.value = true
     error.value = null
     try {
-      await bridgeApi.armAlarm(mode)
+      await bridgeApi.armAlarm(mode, pin)
       await fetchStatus()
     } catch (e) {
       error.value = e.message
@@ -60,11 +60,11 @@ export const useSecurityStore = defineStore('security', () => {
     }
   }
 
-  async function disarmSystem() {
+  async function disarmSystem(pin) {
     loading.value = true
     error.value = null
     try {
-      await bridgeApi.disarmAlarm()
+      await bridgeApi.disarmAlarm(pin)
       await fetchStatus()
     } catch (e) {
       error.value = e.message
