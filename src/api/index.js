@@ -1,0 +1,153 @@
+// API configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+const API_KEY = import.meta.env.VITE_API_KEY || ''
+
+/**
+ * Fetch wrapper with authentication
+ */
+async function apiFetch(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  }
+  
+  if (API_KEY) {
+    headers['X-API-Key'] = API_KEY
+  }
+  
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  })
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Request failed' }))
+    throw new Error(error.message || `HTTP ${response.status}`)
+  }
+  
+  return response.json()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Bridge API (Real-time data from ESP32)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const bridgeApi = {
+  /**
+   * Get system health status
+   */
+  getHealth() {
+    return apiFetch('/api/health')
+  },
+
+  /**
+   * Get full system status
+   */
+  getStatus() {
+    return apiFetch('/api/status')
+  },
+
+  /**
+   * Get all sensors with current state
+   */
+  getSensors() {
+    return apiFetch('/api/sensors')
+  },
+
+  /**
+   * Get alarm system state
+   */
+  getAlarm() {
+    return apiFetch('/api/alarm')
+  },
+
+  /**
+   * Arm the alarm system
+   * @param {string} mode - 'stay' or 'away'
+   */
+  armAlarm(mode = 'away') {
+    return apiFetch('/api/alarm/arm', {
+      method: 'POST',
+      body: JSON.stringify({ mode }),
+    })
+  },
+
+  /**
+   * Disarm the alarm system
+   */
+  disarmAlarm() {
+    return apiFetch('/api/alarm/disarm', {
+      method: 'POST',
+    })
+  },
+
+  /**
+   * Get battery status for all sensors
+   */
+  getBatteries() {
+    return apiFetch('/api/batteries')
+  },
+
+  /**
+   * Get climate data from all sensors
+   */
+  getClimate() {
+    return apiFetch('/api/climate')
+  },
+
+  /**
+   * Get dashboard overview
+   */
+  getDashboard() {
+    return apiFetch('/api/dashboard')
+  },
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Database API (Historical data from PostgreSQL)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const databaseApi = {
+  /**
+   * Get system events with pagination
+   * @param {Object} params - Query parameters
+   */
+  getEvents(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    return apiFetch(`/api/events?${query}`)
+  },
+
+  /**
+   * Get climate history
+   * @param {Object} params - Query parameters (sensor_id, start, end, interval)
+   */
+  getClimateHistory(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    return apiFetch(`/api/climate/history?${query}`)
+  },
+
+  /**
+   * Get battery history
+   * @param {Object} params - Query parameters
+   */
+  getBatteryHistory(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    return apiFetch(`/api/battery/history?${query}`)
+  },
+
+  /**
+   * Get alarm history
+   * @param {Object} params - Query parameters
+   */
+  getAlarmHistory(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    return apiFetch(`/api/alarm/history?${query}`)
+  },
+}
+
+export default {
+  bridge: bridgeApi,
+  database: databaseApi,
+}

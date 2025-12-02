@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply text-gray-900 dark:text-gray-100;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+  }
+  
+  .btn-primary {
+    @apply bg-climax-600 text-white hover:bg-climax-700;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700;
+  }
+  
+  .status-armed {
+    @apply text-armed bg-red-100 dark:bg-red-900/30;
+  }
+  
+  .status-disarmed {
+    @apply text-disarmed bg-green-100 dark:bg-green-900/30;
+  }
+  
+  .status-pending {
+    @apply text-pending bg-amber-100 dark:bg-amber-900/30;
+  }
+}
